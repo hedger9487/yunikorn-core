@@ -662,10 +662,26 @@ func (p *Preemptor) TryPreemption() (*AllocationResult, bool) {
 
 	hasShortfall := victimsTotalResource.IsEmpty()
 	if !hasShortfall {
-		for k, victimVal := range victimsTotalResource.Resources {
-			if needVal, ok := p.ask.GetAllocatedResource().Resources[k]; ok && victimVal < needVal {
-				hasShortfall = true
+		hasVictimsOnOtherNodes := false
+		for _, victim := range victims {
+			if victim.GetNodeID() != nodeID {
+				hasVictimsOnOtherNodes = true
 				break
+			}
+		}
+
+		for k, victimVal := range victimsTotalResource.Resources {
+			if needVal, ok := p.ask.GetAllocatedResource().Resources[k]; ok {
+				if !fitIn && !hasVictimsOnOtherNodes {
+					avail := p.nodeAvailableMap[nodeID].Resources[k]
+					if avail+victimVal < needVal {
+						hasShortfall = true
+						break
+					}
+				} else if victimVal < needVal {
+					hasShortfall = true
+					break
+				}
 			}
 		}
 	}
